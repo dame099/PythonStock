@@ -11,16 +11,40 @@ class Contact:
         print("E-mail : " , self.e_mail)
         print("Address : " , self.addr)
 
-    def set_contact(self):
-        self.name = input("Name : ")
-        self.phone_number = input("Phone Number : ")
-        self.e_mail = input("E-mail : ")
-        self.addr = input("Address : ")
+def set_contact():
+    name = input("Name : ")
+    phone_number = input("Phone Number : ")
+    e_mail = input("E-mail : ")
+    addr = input("Address : ")
+    contact = Contact(name,phone_number,e_mail,addr)
+    return contact
+
+def print_menu():
+    print("1. 연락처 입력")
+    print("2. 연락처 출력")
+    print("3. 연락처 삭제")
+    print("4. 종료")
+    menu = input("메뉴선택: ")
+    return int(menu)
+
+
+def print_contact(contact_list):
+    for contact in contact_list:
+        contact.print_info()
+        print('\n')
 
 def run():
-    me = Contact(0,0,0,0)
-    me.set_contact()
-    me.print_info()
+    contact_list = []
+    while 1:
+        menu = print_menu()
+        if menu == 1:
+            contact = set_contact()
+            contact_list.append(contact)
+        elif menu == 2 :
+            print_contact(contact_list)
+        elif menu == 4:
+            break
+
 
 if __name__ == "__main__":
     run()
