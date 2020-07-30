@@ -1,9 +1,9 @@
 import win32com.client
 import time
 
-
-def CheckVolumn(instStockChart,code):
-
+#종목코드가 code인 종목에 대한 거래량 측정
+def CheckVolumn(instStockChart,code):   
+    
     instStockChart.SetInputValue(0, code)
     #날짜개수로 요청
     instStockChart.SetInputValue(1, ord('2'))
@@ -33,7 +33,6 @@ def CheckVolumn(instStockChart,code):
     else:
         print("Nah...")
         return 0
-
 def LookUpCode(instCpCodeMgr):
     #전체 종목코드 조회
     codeList = instCpCodeMgr.GetStockListByMarket(1)
