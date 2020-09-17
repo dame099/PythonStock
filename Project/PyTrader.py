@@ -28,6 +28,9 @@ class MyWindow(QMainWindow,form_class):
         print(accounts_list)
         self.comboBox.addItems(accounts_list)   #combox에 읽어온 계좌 입력
 
+        #장 시작시 자동 주문이 수행되는지 나타내주는 변수
+        self.trade_stocks_done = False
+
         #종목코드가 입력되면 해당 종목명을 출력
         self.lineEdit.textChanged.connect(self.code_changed)
 
@@ -42,10 +45,12 @@ class MyWindow(QMainWindow,form_class):
         self.timer2.start(1000*10)
         self.timer2.timeout.connect(self.timeout2)
 
+        #미리 저장되어있는 buy_list.txt와 sell_list.txt를 읽어오는 함수를 호출
+        self.load_buy_sell_list()
 
-
-
+    #각종 시간 관련 트리거 함수
     def timeout(self):
+        market_start_time = QTime(9,0,0)
         current_time = QTime.currentTime()
         text_time = current_time.toString("hh:mm:ss")
         time_msg = "현재시간: " + text_time
@@ -58,12 +63,17 @@ class MyWindow(QMainWindow,form_class):
 
         self.statusbar.showMessage(state_msg + " | " + time_msg)
 
+        #9시가 되면 자동으로 리스트에 있는 주문을 실행하도록 구현
+        if current_time > market_start_time and self.trade_stocks_done is False:
+            self.trade_stocks()
+            self.trade_stocks_done = True
+
+
     #종목코드 입력칸(lineEdit)에 값이 입력되면, API를 이용해서 해당 종목명을 lindEdit_2에 출력해주는 기능
     def code_changed(self):
         code = self.lineEdit.text()
         name = self.kiwoom.get_master_code_name(code)
         self.lineEdit_2.setText(name)
-
 
     #주문을 전달하는 함수
     def send_order(self):
@@ -124,12 +134,100 @@ class MyWindow(QMainWindow,form_class):
 
         self.tableWidget_2.resizeRowsToContents()
 
-
     def timeout2(self):
         if self.checkBox.isChecked():
             self.check_balance()
 
+    #미리 저장되어있는 buy_list.txt와 sell_list.txt를 읽어서 QTableWidget에 출력하는 함수
+    def load_buy_sell_list(self):
+        f = open("./buy_list.txt",'rt',encoding='UTF8')
+        buy_list = f.readlines()
+        f.close()
+
+        f = open("./sell_list.txt",'rt',encoding='UTF8')
+        sell_list = f.readlines()
+        f.close()
+
+        row_count = len(buy_list) + len(sell_list)  #출력할 row의 갯수
+        self.tableWidget_3.setRowCount(row_count)
+
+        #buy_list 출력, 긁어왔다.
+        for row in range(len(buy_list)):
+            row_data = buy_list[row]
+            splited_row_data = row_data.split(';')
+            splited_row_data[1] = self.kiwoom.get_master_code_name(splited_row_data[1].rsplit())
+            for col in range(len(splited_row_data)):
+                item = QTableWidgetItem(splited_row_data[col].rstrip())
+                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
+                self.tableWidget_3.setItem(row, col, item)
+
+        #sell_list 출력, 긁어왔다.
+        for row in range(len(sell_list)):
+            row_data = sell_list[row]
+            splited_row_data = row_data.split(';')
+            splited_row_data[1] = self.kiwoom.get_master_code_name(splited_row_data[1].rsplit())
+            for col in range(len(splited_row_data)):
+                item = QTableWidgetItem(splited_row_data[col].rstrip())
+                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
+                self.tableWidget_3.setItem(len(buy_list) + row, col, item)
+
+        #QTableWidget에서의 행 크기 조정
+        self.tableWidget_3.resizeRowsToContents()
+
+    #매일 장이 시작되는 시점에 선정된 종목에 대해 주문하는 함수
+    def trade_stocks(self):
+        hoga_lookup = {'지정가' : '00', '시장가' : '03'}
+        
+        f = open("buy_list.txt", 'rt',encoding='UTF-8')
+        buy_list = f.readlines()
+        f.close()
+        f = open("sell_list.txt", 'rt',encoding='UTF-8')
+        sell_list = f.readlines()
+        f.close()
+
+        account = self.comboBox.currentText()   #주문에 필요한 계좌정보를 combobox에서 얻어옴.
+
+        #매수 실행
+        for row_data in buy_list:
+            splited_row_data = row_data.split(';')
+            hoga = splited_row_data[2]
+            code = splited_row_data[1]
+            num = splited_row_data[3]
+            price = splited_row_data[4]
             
+            #상태정보가 매수전일때에만 send_oredr() 호출
+            if splited_row_data[5].rstrip() == '매수전':
+                self.kiwoom.send_order("send_order_req","0101",account,1,code,num,price,hoga_lookup[hoga],"")
+
+        #매수 실행 후 buy_list update
+        for i,row_data in enumerate(buy_list):
+            buy_list[i] = buy_list[i].replace("매수전","주문완료")
+        f = open("./buy_list.txt",'wt')
+        for row_data in buy_list:
+            f.write(row_data)
+        f.close()
+
+        #매도 실행
+        for row_data in sell_list:
+            splited_row_data = row_data.split(';')
+            hoga = splited_row_data[2]
+            code = splited_row_data[1]
+            num = splited_row_data[3]
+            price = splited_row_data[4]
+            
+            #상태정보가 매도전일때에만 send_oredr() 호출
+            if splited_row_data[5].rstrip() == '매도전':
+                self.kiwoom.send_order("send_order_req","0101",account,2,code,num,price,hoga_lookup[hoga],"")
+
+        #매도 실행 후 sell_list update
+        for i,row_data in enumerate(sell_list):
+            sell_list[i] = sell_list[i].replace("매도전","주문완료")
+        f = open("./sell_list.txt",'wt')
+        for row_data in sell_list:
+            f.write(row_data)
+        f.close()
+
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     myWindow = MyWindow()
