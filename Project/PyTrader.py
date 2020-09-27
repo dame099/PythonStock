@@ -140,11 +140,11 @@ class MyWindow(QMainWindow,form_class):
 
     #미리 저장되어있는 buy_list.txt와 sell_list.txt를 읽어서 QTableWidget에 출력하는 함수
     def load_buy_sell_list(self):
-        f = open("./buy_list.txt",'rt',encoding='UTF8')
+        f = open("./buy_list.txt",'rt')
         buy_list = f.readlines()
         f.close()
 
-        f = open("./sell_list.txt",'rt',encoding='UTF8')
+        f = open("./sell_list.txt",'rt')
         sell_list = f.readlines()
         f.close()
 
@@ -178,10 +178,10 @@ class MyWindow(QMainWindow,form_class):
     def trade_stocks(self):
         hoga_lookup = {'지정가' : '00', '시장가' : '03'}
         
-        f = open("buy_list.txt", 'rt',encoding='UTF-8')
+        f = open("buy_list.txt", 'rt')
         buy_list = f.readlines()
         f.close()
-        f = open("sell_list.txt", 'rt',encoding='UTF-8')
+        f = open("sell_list.txt", 'rt')
         sell_list = f.readlines()
         f.close()
 
